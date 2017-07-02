@@ -52,6 +52,7 @@ import java.util.UUID;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -107,6 +108,7 @@ public class KeycloakAuthenticationProcessingFilterTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         request = spy(new MockHttpServletRequest());
+        request.setRequestURI("http://host");
         filter = new KeycloakAuthenticationProcessingFilter(authenticationManager);
         keycloakFailureHandler = new KeycloakAuthenticationFailureHandler();
 
@@ -151,6 +153,7 @@ public class KeycloakAuthenticationProcessingFilterTest {
 
     @Test
     public void testSuccessfulAuthenticationInteractive() throws Exception {
+        request.setRequestURI("http://host" + KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI + "?query");
         Authentication authentication = new KeycloakAuthenticationToken(keycloakAccount, true, authorities);
         filter.successfulAuthentication(request, response, chain, authentication);
 

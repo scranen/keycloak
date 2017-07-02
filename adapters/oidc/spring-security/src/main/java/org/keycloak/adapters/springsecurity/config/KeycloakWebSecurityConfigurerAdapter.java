@@ -40,7 +40,6 @@ import org.springframework.security.config.annotation.web.servlet.configuration.
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
 /**
  * Provides a convenient base class for creating a {@link WebSecurityConfigurer}
@@ -116,7 +115,7 @@ public abstract class KeycloakWebSecurityConfigurerAdapter extends WebSecurityCo
                 .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
                 .and()
                 .addFilterBefore(keycloakPreAuthActionsFilter(), LogoutFilter.class)
-                .addFilterBefore(keycloakAuthenticationProcessingFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(keycloakAuthenticationProcessingFilter(), LogoutFilter.class)
                 .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint())
                 .and()
                 .logout()

@@ -52,8 +52,8 @@ import java.util.UUID;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -108,6 +108,7 @@ public class KeycloakAuthenticationProcessingFilterTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         request = spy(new MockHttpServletRequest());
+        request.setRequestURI("http://host");
         filter = new KeycloakAuthenticationProcessingFilter(authenticationManager);
         keycloakFailureHandler = new KeycloakAuthenticationFailureHandler();
 
@@ -125,31 +126,13 @@ public class KeycloakAuthenticationProcessingFilterTest {
     }
 
     @Test
-    public void testIsBearerTokenRequest() throws Exception {
-        assertFalse(filter.isBearerTokenRequest(request));
-        this.setBearerAuthHeader(request);
-        assertTrue(filter.isBearerTokenRequest(request));
-    }
-
-    @Test
-    public void testIsBearerTokenRequestCaseInsensitive() throws Exception {
-        assertFalse(filter.isBearerTokenRequest(request));
-        this.setAuthorizationHeader(request, "bearer");
-        assertTrue(filter.isBearerTokenRequest(request));
-    }
-
-    @Test
-    public void testIsBasicAuthRequest() throws Exception {
-        assertFalse(filter.isBasicAuthRequest(request));
-        this.setBasicAuthHeader(request);
-        assertTrue(filter.isBasicAuthRequest(request));
-    }
-
-    @Test
-    public void testIsBasicAuthRequestCaseInsensitive() throws Exception {
-        assertFalse(filter.isBasicAuthRequest(request));
-        this.setAuthorizationHeader(request, "basic");
-        assertTrue(filter.isBasicAuthRequest(request));
+    public void testIsLoginPageRequest() {
+        request.setRequestURI("http://host" + DEFAULT_LOGIN_URI + "?query");
+        assertTrue(filter.isLoginPageRequest(request));
+        request.setRequestURI("http://host/some/unknown/endpoint?query");
+        assertFalse(filter.isLoginPageRequest(request));
+        request.setRequestURI("http://host");
+        assertFalse(filter.isLoginPageRequest(request));
     }
 
     @Test
@@ -180,6 +163,7 @@ public class KeycloakAuthenticationProcessingFilterTest {
 
     @Test
     public void testSuccessfulAuthenticationInteractive() throws Exception {
+        request.setRequestURI("http://host" + DEFAULT_LOGIN_URI + "?query");
         Authentication authentication = new KeycloakAuthenticationToken(keycloakAccount, authorities);
         filter.successfulAuthentication(request, response, chain, authentication);
 

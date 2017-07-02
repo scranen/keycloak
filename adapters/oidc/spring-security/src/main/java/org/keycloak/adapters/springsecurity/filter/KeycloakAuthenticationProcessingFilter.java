@@ -32,11 +32,14 @@ import org.keycloak.adapters.spi.AuthChallenge;
 import org.keycloak.adapters.spi.AuthOutcome;
 import org.keycloak.adapters.spi.HttpFacade;
 import org.keycloak.adapters.springsecurity.KeycloakAuthenticationException;
+import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationEntryPoint;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationFailureHandler;
+import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationSuccessHandler;
 import org.keycloak.adapters.springsecurity.authentication.SpringSecurityRequestAuthenticator;
 import org.keycloak.adapters.springsecurity.facade.SimpleHttpFacade;
 import org.keycloak.adapters.springsecurity.token.AdapterTokenStoreFactory;
 import org.keycloak.adapters.springsecurity.token.SpringSecurityAdapterTokenStoreFactory;
+import org.keycloak.common.util.KeycloakUriBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -48,6 +51,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
@@ -62,18 +66,17 @@ import org.springframework.util.Assert;
  */
 public class KeycloakAuthenticationProcessingFilter extends AbstractAuthenticationProcessingFilter implements ApplicationContextAware {
 
-    public static final String DEFAULT_LOGIN_URL = "/sso/login";
     public static final String AUTHORIZATION_HEADER = "Authorization";
-    public static final String SCHEME_BEARER = "bearer ";
-    public static final String SCHEME_BASIC = "basic ";
-
 
     /**
      * Request matcher that matches requests to the {@link KeycloakAuthenticationEntryPoint#DEFAULT_LOGIN_URI default login URI}
-     * and any request with a <code>Authorization</code> header.
+     * and any request with a <code>Authorization</code> header or an {@link AdapterStateCookieRequestMatcher adapter state cookie}.
      */
     public static final RequestMatcher DEFAULT_REQUEST_MATCHER =
-            new OrRequestMatcher(new AntPathRequestMatcher(DEFAULT_LOGIN_URL), new RequestHeaderRequestMatcher(AUTHORIZATION_HEADER));
+            new OrRequestMatcher(
+                    new AntPathRequestMatcher(KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI),
+                    new RequestHeaderRequestMatcher(AUTHORIZATION_HEADER),
+                    new AdapterStateCookieRequestMatcher());
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakAuthenticationProcessingFilter.class);
 
@@ -92,6 +95,7 @@ public class KeycloakAuthenticationProcessingFilter extends AbstractAuthenticati
     public KeycloakAuthenticationProcessingFilter(AuthenticationManager authenticationManager) {
         this(authenticationManager, DEFAULT_REQUEST_MATCHER);
         setAuthenticationFailureHandler(new KeycloakAuthenticationFailureHandler());
+        setAuthenticationSuccessHandler(new KeycloakAuthenticationSuccessHandler(new SavedRequestAwareAuthenticationSuccessHandler()));
     }
 
     /**
@@ -138,7 +142,7 @@ public class KeycloakAuthenticationProcessingFilter extends AbstractAuthenticati
         // using Spring authenticationFailureHandler
         deployment.setDelegateBearerErrorResponseSending(true);
 
-        AdapterTokenStore tokenStore = adapterTokenStoreFactory.createAdapterTokenStore(deployment, request);
+        AdapterTokenStore tokenStore = adapterTokenStoreFactory.createAdapterTokenStore(deployment, request, response);
         RequestAuthenticator authenticator
                 = new SpringSecurityRequestAuthenticator(facade, request, deployment, tokenStore, -1);
 
@@ -182,35 +186,21 @@ public class KeycloakAuthenticationProcessingFilter extends AbstractAuthenticati
     }
 
     /**
-     * Returns true if the request was made with a bearer token authorization header.
+     * Returns true if this is a request to the Keycloak login endpoint.
      *
      * @param request the current <code>HttpServletRequest</code>
-     *
-     * @return <code>true</code> if the <code>request</code> was made with a bearer token authorization header;
-     * <code>false</code> otherwise.
+     * @return <code>true</code> if the path of the <code>request</code> equals {@value KeycloakAuthenticationEntryPoint#DEFAULT_LOGIN_URI}.
      */
-    protected boolean isBearerTokenRequest(HttpServletRequest request) {
-        String authValue = request.getHeader(AUTHORIZATION_HEADER);
-        return authValue != null && authValue.toLowerCase().startsWith(SCHEME_BEARER);
-    }
-
-    /**
-     * Returns true if the request was made with a Basic authentication authorization header.
-     *
-     * @param request the current <code>HttpServletRequest</code>
-     * @return <code>true</code> if the <code>request</code> was made with a Basic authentication authorization header;
-     * <code>false</code> otherwise.
-     */
-    protected boolean isBasicAuthRequest(HttpServletRequest request) {
-        String authValue = request.getHeader(AUTHORIZATION_HEADER);
-        return authValue != null && authValue.toLowerCase().startsWith(SCHEME_BASIC);
+    protected boolean isLoginPageRequest(HttpServletRequest request) {
+        return KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI.equals(
+                KeycloakUriBuilder.fromUri(request.getRequestURI()).getPath());
     }
 
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
                                             Authentication authResult) throws IOException, ServletException {
 
-        if (!(this.isBearerTokenRequest(request) || this.isBasicAuthRequest(request))) {
+        if (isLoginPageRequest(request)) {
             super.successfulAuthentication(request, response, chain, authResult);
             return;
         }

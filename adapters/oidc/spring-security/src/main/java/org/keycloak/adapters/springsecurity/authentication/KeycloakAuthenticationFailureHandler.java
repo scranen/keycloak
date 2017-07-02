@@ -36,6 +36,9 @@ public class KeycloakAuthenticationFailureHandler implements AuthenticationFailu
 
 	@Override
 	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+		if (KeycloakCookieBasedRedirect.getRedirectUrlFromCookie(request) != null) {
+			response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl(null));
+		}
 		response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unable to authenticate using the Authorization header");
 	}
 }

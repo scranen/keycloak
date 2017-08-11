@@ -288,6 +288,16 @@ public class AdapterDeploymentContext {
         }
 
         @Override
+        public String getAdapterStateCookiePath() {
+            return delegate.getAdapterStateCookiePath();
+        }
+
+        @Override
+        public void setAdapterStateCookiePath(String adapterStateCookiePath) {
+            delegate.setAdapterStateCookiePath(adapterStateCookiePath);
+        }
+
+        @Override
         public String getStateCookieName() {
             return delegate.getStateCookieName();
         }

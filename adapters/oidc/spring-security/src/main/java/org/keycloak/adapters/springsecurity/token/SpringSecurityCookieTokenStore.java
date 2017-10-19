@@ -69,7 +69,7 @@ public class SpringSecurityCookieTokenStore extends SpringSecurityTokenStore {
             final OidcKeycloakAccount account =
                     new SimpleKeycloakAccount(principal, roles, securityContext);
             SecurityContextHolder.getContext()
-                    .setAuthentication(new KeycloakAuthenticationToken(account));
+                    .setAuthentication(new KeycloakAuthenticationToken(account, false));
         } else {
             super.checkCurrentToken();
         }

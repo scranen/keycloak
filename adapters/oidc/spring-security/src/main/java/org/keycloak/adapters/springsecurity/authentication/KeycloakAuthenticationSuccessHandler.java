@@ -56,7 +56,7 @@ public class KeycloakAuthenticationSuccessHandler implements AuthenticationSucce
             }
         } else {
             try {
-                response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl(""));
+                response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl(null));
                 response.sendRedirect(location);
             } catch (IOException e) {
                 LOG.warn("Unable to redirect user after login", e);

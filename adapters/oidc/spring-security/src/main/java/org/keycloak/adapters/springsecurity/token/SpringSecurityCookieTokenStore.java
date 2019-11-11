@@ -21,9 +21,11 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.keycloak.KeycloakPrincipal;
+import org.keycloak.KeycloakSecurityContext;
 import org.keycloak.adapters.AdapterUtils;
 import org.keycloak.adapters.CookieTokenStore;
 import org.keycloak.adapters.KeycloakDeployment;
+import org.keycloak.adapters.OIDCHttpFacade;
 import org.keycloak.adapters.OidcKeycloakAccount;
 import org.keycloak.adapters.RefreshableKeycloakSecurityContext;
 import org.keycloak.adapters.RequestAuthenticator;
@@ -65,6 +67,10 @@ public class SpringSecurityCookieTokenStore extends SpringSecurityTokenStore {
         if (principal != null) {
             final RefreshableKeycloakSecurityContext securityContext =
                     principal.getKeycloakSecurityContext();
+            KeycloakSecurityContext current = ((OIDCHttpFacade) facade).getSecurityContext();
+            if (current != null) {
+                securityContext.setAuthorizationContext(current.getAuthorizationContext());
+            }
             final Set<String> roles = AdapterUtils.getRolesFromSecurityContext(securityContext);
             final OidcKeycloakAccount account =
                     new SimpleKeycloakAccount(principal, roles, securityContext);
